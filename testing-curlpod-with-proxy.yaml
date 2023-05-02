@@ -1,0 +1,125 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: proxy-config
+data:
+  HTTP_PROXY: http://proxy-svc:3128
+  HTTPS_PROXY: http://proxy-svc:3128
+  NO_PROXY: localhost,127.0.0.1,.svc,.kubecost
+  http_proxy: http://proxy-svc:3128
+  https_proxy: http://proxy-svc:3128
+  no_proxy: localhost,127.0.0.1,.svc,.kubecost
+---
+# This is the default config, duplicating here for easy testing of changes
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-proxy-connext
+data:
+  nginx.conf: |
+    worker_processes  auto;
+
+    pid        /tmp/nginx.pid;
+
+    events {
+        worker_connections  1024;
+    }
+
+    http {
+
+        proxy_temp_path /tmp/proxy_temp;
+        client_body_temp_path /tmp/client_temp;
+        fastcgi_temp_path /tmp/fastcgi_temp;
+        uwsgi_temp_path /tmp/uwsgi_temp;
+        scgi_temp_path /tmp/scgi_temp;
+
+        access_log /dev/stdout;
+        error_log  /dev/stderr;
+
+        server {
+            listen 3128;
+            resolver 1.1.1.1 ipv6=off;
+
+            proxy_connect;
+            proxy_connect_allow            all;
+            proxy_connect_connect_timeout  600s;
+            proxy_connect_read_timeout     600s;
+            proxy_connect_send_timeout     600s;
+
+            proxy_connect_timeout 600s;
+            proxy_send_timeout 600s;
+            proxy_read_timeout 600s;
+            send_timeout 600s;
+
+            location / {
+                proxy_http_version 1.1;
+                proxy_pass http://$host;
+                proxy_set_header Host $host;
+            }
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: curlpod
+  name: curlpod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: curlpod
+  template:
+    metadata:
+      name: curlpod
+      labels:
+        app: curlpod
+    spec:
+      containers:
+      - name: curlpod
+        command:
+        - sleep
+        - "6000"
+        image: curlimages/curl
+        envFrom:
+          - configMapRef:
+              name: proxy-config
+        resources: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: proxy-svc
+  name: proxy-svc
+spec:
+  containers:
+  - image: jgoodier/proxy-connext
+    name: proxy-svc
+    resources: {}
+    volumeMounts:
+    - mountPath: /usr/local/nginx/conf
+      name: nginx-conf
+      readOnly: true
+  volumes:
+  - name: nginx-conf
+    configMap:
+      name: nginx-proxy-connext
+      items:
+        - key: nginx.conf
+          path: nginx.conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: proxy-svc
+  name: proxy-svc
+spec:
+  ports:
+  - port: 3128
+    protocol: TCP
+    targetPort: 3128
+  selector:
+    run: proxy-svc
