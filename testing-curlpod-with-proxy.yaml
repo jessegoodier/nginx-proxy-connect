@@ -3,11 +3,11 @@ kind: ConfigMap
 metadata:
   name: proxy-config
 data:
-  HTTP_PROXY: http://proxy-svc:3128
-  HTTPS_PROXY: http://proxy-svc:3128
+  HTTP_PROXY: http://proxy-connect:3128
+  HTTPS_PROXY: http://proxy-connect:3128
   NO_PROXY: localhost,127.0.0.1,.svc,.kubecost
-  http_proxy: http://proxy-svc:3128
-  https_proxy: http://proxy-svc:3128
+  http_proxy: http://proxy-connect:3128
+  https_proxy: http://proxy-connect:3128
   no_proxy: localhost,127.0.0.1,.svc,.kubecost
 ---
 # This is the default config, duplicating here for easy testing of changes
@@ -87,39 +87,63 @@ spec:
               name: proxy-config
         resources: {}
 ---
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   labels:
-    run: proxy-svc
-  name: proxy-svc
+    app: proxy-connect
+    app.kubernetes.io/instance: proxy-connect
+  name: proxy-connect
 spec:
-  containers:
-  - image: jgoodier/proxy-connext
-    name: proxy-svc
-    resources: {}
-    volumeMounts:
-    - mountPath: /usr/local/nginx/conf
-      name: nginx-conf
-      readOnly: true
-  volumes:
-  - name: nginx-conf
-    configMap:
-      name: nginx-proxy-connext
-      items:
-        - key: nginx.conf
-          path: nginx.conf
+  replicas: 1
+  selector:
+    matchLabels:
+      app: proxy-connect
+      app.kubernetes.io/instance: proxy-connect
+  template:
+    metadata:
+      name: proxy-connect
+      labels:
+        app: proxy-connect
+        app.kubernetes.io/instance: proxy-connect
+    spec:
+      containers:
+      - image: jgoodier/proxy-connext
+        name: proxy-connect
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65534
+        volumeMounts:
+        - mountPath: /usr/local/nginx/conf
+          name: nginx-conf
+          readOnly: true
+        - name: emptydir
+          mountPath: /usr/local/nginx/logs
+        - name: emptydir
+          mountPath: /tmp
+      volumes:
+      - name: nginx-conf
+        configMap:
+          name: nginx-proxy-connext
+          items:
+            - key: nginx.conf
+              path: nginx.conf
+      - name: emptydir
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: proxy-svc
-  name: proxy-svc
+    app: proxy-connect
+  name: proxy-connect-svc
 spec:
   ports:
   - port: 3128
     protocol: TCP
     targetPort: 3128
   selector:
-    run: proxy-svc
+    app: proxy-connect
