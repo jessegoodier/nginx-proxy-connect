@@ -1,7 +1,7 @@
 FROM nginxinc/nginx-unprivileged:stable-alpine
 LABEL maintainer "Jesse Goodier <github.com/jessegoodier>"
 
-ENV NGINX_VERSION 1.24.0
+ENV NGINX_VERSION 1.25.2
 
 ##
 # build proxy_connext

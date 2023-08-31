@@ -1,6 +1,8 @@
 # nginx-proxy-connect
 
-Usage:
+I have no idea if this repo is being used, please give a star if you find it useful.
+
+## Usage
 
 ```sh
 kubectl create ns proxy-connect
@@ -12,5 +14,14 @@ kubectl logs deployments/proxy-connect
 or simply:
 
 ```sh
-kaf https://raw.githubusercontent.com/jessegoodier/nginx-proxy-connect/main/complete-proxyConnect-deployment.yaml
+k apply -f https://raw.githubusercontent.com/jessegoodier/nginx-proxy-connect/main/complete-proxyConnect-deployment.yaml
+```
+
+## Build Dockerfile
+
+```sh
+docker buildx create --name builder-proxy-connect --use --bootstrap
+docker buildx build --push \
+--platform linux/amd64,linux/arm64 \
+--tag jgoodier/proxy-connect:latest .
 ```

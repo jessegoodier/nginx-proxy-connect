@@ -1,5 +1,5 @@
 ---
-# curlpod proxy settings
+# curlpod proxy settings, used as system environment variables
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -61,6 +61,7 @@ data:
         }
     }
 ---
+# pod for testing
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -79,16 +80,17 @@ spec:
         app: curlpod
     spec:
       containers:
-      - name: curlpod
-        command:
-        - sleep
-        - "6000"
-        image: curlimages/curl
-        envFrom:
-          - configMapRef:
-              name: proxy-config
-        resources: {}
+        - name: curlpod
+          command:
+            - sleep
+            - "6000"
+          image: curlimages/curl
+          envFrom:
+            - configMapRef:
+                name: proxy-config
+          resources: {}
 ---
+# proxy-connect pod
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -110,32 +112,33 @@ spec:
         app.kubernetes.io/instance: proxy-connect
     spec:
       containers:
-      - image: jgoodier/proxy-connext
-        name: proxy-connect
-        resources: {}
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          runAsNonRoot: true
-          runAsUser: 65534
-        volumeMounts:
-        - mountPath: /usr/local/nginx/conf
-          name: nginx-conf
-          readOnly: true
-        - name: emptydir
-          mountPath: /usr/local/nginx/logs
-        - name: emptydir
-          mountPath: /tmp
+        - image: jgoodier/proxy-connext:1.25.2
+          name: proxy-connect
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65534
+          volumeMounts:
+            - mountPath: /usr/local/nginx/conf
+              name: nginx-conf
+              readOnly: true
+            - name: emptydir
+              mountPath: /usr/local/nginx/logs
+            - name: emptydir
+              mountPath: /tmp
       volumes:
-      - name: nginx-conf
-        configMap:
-          name: nginx-proxy-connext
-          items:
-            - key: nginx.conf
-              path: nginx.conf
-      - name: emptydir
-        emptyDir: {}
+        - name: nginx-conf
+          configMap:
+            name: nginx-proxy-connext
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+        - name: emptydir
+          emptyDir: {}
 ---
+# proxy-connect service to target for the system-proxy
 apiVersion: v1
 kind: Service
 metadata:
@@ -144,8 +147,8 @@ metadata:
   name: proxy-connect-svc
 spec:
   ports:
-  - port: 3128
-    protocol: TCP
-    targetPort: 3128
+    - port: 3128
+      protocol: TCP
+      targetPort: 3128
   selector:
     app: proxy-connect
