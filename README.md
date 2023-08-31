@@ -1,8 +1,16 @@
 # nginx-proxy-connect
 
+Usage:
 
-testing
-
+```sh
+kubectl create ns proxy-connect
+kubectl apply -f complete-proxyConnect-deployment.yaml -n proxy-connect
+kubectl exec -i -t -n proxy-connect deployments/curlpod -- curl https://g.co
+kubectl logs deployments/proxy-connect
 ```
-k exec -i -t deployments/curlpod -- curl https://g.co
-k logs proxy-svc
+
+or simply:
+
+```sh
+kaf https://raw.githubusercontent.com/jessegoodier/nginx-proxy-connect/main/complete-proxyConnect-deployment.yaml
+```

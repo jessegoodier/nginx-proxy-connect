@@ -5,11 +5,11 @@ kind: ConfigMap
 metadata:
   name: proxy-config
 data:
-  HTTP_PROXY: http://proxy-connect:3128
-  HTTPS_PROXY: http://proxy-connect:3128
+  HTTP_PROXY: http://proxy-connect-svc:3128
+  HTTPS_PROXY: http://proxy-connect-svc:3128
   NO_PROXY: localhost,127.0.0.1,.svc,.kubecost
-  http_proxy: http://proxy-connect:3128
-  https_proxy: http://proxy-connect:3128
+  http_proxy: http://proxy-connect-svc:3128
+  https_proxy: http://proxy-connect-svc:3128
   no_proxy: localhost,127.0.0.1,.svc,
 ---
 # NGINX config to load proxy_connect and proxy all traffic
